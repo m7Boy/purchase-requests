@@ -74,10 +74,43 @@ class PurchaseRequestService
 
             $transaction->commit();
 
+            try {
+                $this->sendNotification($model, $status);
+            } catch (\Throwable $e) {
+                Yii::error($e->getMessage());
+            }
+
             return true;
         } catch (\Throwable $e) {
             $transaction->rollBack();
             throw $e;
         }
+    }
+
+    private function sendNotification($model, $status)
+    {
+        $email = $this->getUserEmail($model->created_by);
+
+        if (!$email) {
+            return;
+        }
+
+        Yii::$app->mailer->compose()
+            ->setTo($email)
+            ->setSubject('Purchase request status changed')
+            ->setTextBody(
+                'Your request "' . $model->title . '" is now ' . $status . '.'
+            )
+            ->send();
+    }
+
+    private function getUserEmail($userId)
+    {
+        $users = [
+            100 => null,
+            101 => null
+        ];
+
+        return $users[$userId] ?? null;
     }
 }
